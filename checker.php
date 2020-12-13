@@ -14,7 +14,10 @@ while (false !== $line = fgets($domains)) {
     $uri = 'http://' . $line  . "/?author=1";
 
     try {
-        $response = $client->request('GET', $uri, ['allow_redirects' => false]);
+        $response = $client->request('GET', $uri, [
+            'allow_redirects' => false,
+            'max' => '2'
+            ]);
     } catch (Exception $e) {
         echo $line . ": " . $e->getCode() . PHP_EOL;
         fwrite($bad, $line . PHP_EOL);
@@ -23,7 +26,6 @@ while (false !== $line = fgets($domains)) {
     if ($response->getStatusCode() == "301") {
         $location = $response->getHeader("Location")[0];
         $location_array = array_diff(explode('/', $location), ['', 'http:', '?author=1']);
-//        print_r(count($location_array));die;
 
         if (count($location_array) <= 3) {
             $uri = "http://" . $line . "/wp-login.php";
