@@ -1,5 +1,6 @@
 <?php
     require "vendor/autoload.php";
+    require "lib/functions.php";
 
     $client = new GuzzleHttp\Client();
 
@@ -7,22 +8,11 @@
     $logins    = file('logins.txt') or die("File logins.txt not exists!");
     $passwords = file('passwords.txt') or die("File passwords.txt not exists!");
 
-    array_walk($logins, function (&$i, $k) {
-        print_r($i);die;
-        return $i . '121212';
-    });
-
-    echo "<pre>";
-    var_dump($logins[0]);die;
+    $logins = array_map('trimRow', $logins);
+    $passwords = array_map('trimRow', $passwords);
 
     foreach ($logins as $login) {
-        $login = trim($login);
         foreach ($passwords as $password) {
-//           $password = trim($password);
-           $domain = fgets($domains);
-           $hui = null;
-           var_dump($password == "{login}");die;
-           $password == '{login}' && isset(explode(';', $domain)[1]) ? $hui = 'true' : $hui = 'false';
-            echo $hui;die();
+
         }
     }
