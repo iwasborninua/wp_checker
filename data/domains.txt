@@ -1,0 +1,2 @@
+wp.loc
+wp1.loc

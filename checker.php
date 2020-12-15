@@ -1,47 +1,61 @@
 <?php
 
 require "vendor/autoload.php";
+require "lib/functions.php";
 
-$domains = fopen("domains.txt", 'r+');
-$verified = fopen("verified.txt", 'w+');
-$bad = fopen("bad.txt", 'w+');
+$domains  = fopen("data/domains.txt", 'r+');
+$verified = fopen("data/verified.txt", 'w+');
+$bad      = fopen("data/bad.txt", 'w+');
 
 $client = new GuzzleHttp\Client();
-$count = 1;
 
 while (false !== $line = fgets($domains)) {
     $line = trim($line);
-    $uri = 'http://' . $line  . "/?author=1";
+    $login_url = DP . $line . WP_ADMIN_PATH;
 
     try {
-        $response = $client->request('GET', $uri, [
+        $response = $client->request('GET', $login_url, [
             'allow_redirects' => false,
             'max' => '2'
-            ]);
+        ]);
     } catch (Exception $e) {
-        echo $line . ": " . $e->getCode() . PHP_EOL;
         fwrite($bad, $line . PHP_EOL);
+        echo "bad request" . $line . PHP_EOL;
+        continue;
     }
 
-    if ($response->getStatusCode() == "301") {
-        $location = $response->getHeader("Location")[0];
-        $location_array = array_diff(explode('/', $location), ['', 'http:', '?author=1']);
+    if ($response->getStatusCode() == 200) {
+        $url = DP . $line . AUTHOR_DORK;
 
-        if (count($location_array) <= 3) {
-            $uri = "http://" . $line . "/wp-login.php";
-        } else {
-            $uri = "http://" . $line . "/wp-login.php;" . array_pop($location_array);
+        try {
+            $response = $client->request('GET', $url, [
+                'allow_redirects' => false,
+                'max' => '2'
+            ]);
+        } catch (Exception $e) {
+            echo "code: " . $e->getCode() . " " . $line . PHP_EOL;
+            fwrite($bad, $line . PHP_EOL);
         }
 
-        fwrite($verified, $uri . PHP_EOL);
-        echo $uri . " :301" . PHP_EOL;
+        if ($response->getStatusCode() == 301) {
+            $location = $response->getHeader("Location")[0];
+            $location_array = array_diff(explode('/', $location), LOCATION_URL_RULES);
 
-    } elseif ($response->getStatusCode() == "200") {
-        $uri = "http://" . $line . "/wp-login.php";
-        fwrite($verified, $uri . PHP_EOL);
-        echo $uri . ": 200" . PHP_EOL;
-    } else {
-        echo $line . ": bad" . PHP_EOL;
-        fwrite($bad, $line . PHP_EOL);
+            if (count($location_array) == 2) {
+                $url = DP . $line . "/wp-login.php;" . array_pop($location_array);
+            } else {
+                $url = DP . $line . WP_ADMIN_PATH;
+            }
+
+            fwrite($verified, $url . PHP_EOL);
+            echo "verifed: " . $url . PHP_EOL;
+        } elseif ($response->getStatusCode() == "200") {
+            $url = DP . $line . WP_ADMIN_PATH;
+            fwrite($verified, $url . PHP_EOL);
+            echo $url . ": 200" . PHP_EOL;
+        } else {
+            echo $line . ": bad" . PHP_EOL;
+            fwrite($bad, $line . PHP_EOL);
+        }
     }
 }
