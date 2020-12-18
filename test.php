@@ -11,6 +11,7 @@ use Amp\Promise;
 use Amp\Producer;
 use Amp\Sync\LocalSemaphore;
 use Amp\Http\Client\Request;
+use Symfony\Component\DomCrawler\Crawler;
 use function Amp\Sync\ConcurrentIterator\each;
 
 $verified = fopen('data/verified.txt', 'w+');
@@ -46,7 +47,15 @@ Loop::run(function () use ($verified, $bad) {
         try {
             $response = yield $client->request($request);
             if ($response->getStatus() == 200) {
-                fwrite($verified, DP . $line . WP_ADMIN_PATH . PHP_EOL);
+                $login_form = (new Crawler((string) yield $response->getBody()->buffer()))
+                    ->filter('form#loginform');
+                if ($login_form == true) {
+                    echo "verifed: {$line}" . PHP_EOL;
+                    fwrite($verified, DP . $line . WP_ADMIN_PATH . PHP_EOL);
+                } else {
+                    echo "form not found: {$line}" . PHP_EOL;
+                    fwrite($bad,$line. PHP_EOL);
+                }
             } else {
                 fwrite($bad, $line . PHP_EOL);
             }
