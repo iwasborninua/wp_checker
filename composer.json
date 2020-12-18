@@ -2,6 +2,9 @@
     "require": {
         "guzzlehttp/guzzle": "7.0",
         "symfony/dom-crawler": "^5.2",
-        "symfony/css-selector": "^5.2"
+        "symfony/css-selector": "^5.2",
+        "amphp/amp": "^2.5",
+        "amphp/http-client": "^4.5",
+        "amphp/file": "^1.0"
     }
 }
