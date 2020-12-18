@@ -1,5 +1,6 @@
 <?php
 require 'vendor/autoload.php';
+require 'lib/functions.php';
 
 use Amp\Delayed;
 use Amp\Dns;
@@ -11,6 +12,9 @@ use Amp\Producer;
 use Amp\Sync\LocalSemaphore;
 use Amp\Http\Client\Request;
 use function Amp\Sync\ConcurrentIterator\each;
+
+$verified = fopen('data/verified.txt', 'w+');
+$bad = fopen('data/bad.txt', 'w+');
 
 Dns\resolver(new Dns\Rfc1035StubResolver(null, new class implements Dns\ConfigLoader {
     public function loadConfig(): Promise
@@ -26,7 +30,7 @@ Dns\resolver(new Dns\Rfc1035StubResolver(null, new class implements Dns\ConfigLo
     }
 }));
 
-Loop::run(function () {
+Loop::run(function () use ($verified, $bad) {
     $iterator = new Producer(function ($emit) {
         $file = fopen('data/domains.txt', 'r');
         while (false !== $line = fgets($file)) {
@@ -36,12 +40,16 @@ Loop::run(function () {
 
     $client = HttpClientBuilder::buildDefault();
 
-    yield each($iterator, new LocalSemaphore(10), function ($line) use ($client) {
-        $request = new Request("http://{$line}/");
+    yield each($iterator, new LocalSemaphore(50), function ($line) use ($client, $verified, $bad) {
+        $request = new Request( DP . $line . WP_ADMIN_PATH);
         $request->setTcpConnectTimeout(2400);
         try {
             $response = yield $client->request($request);
-            echo $response->getStatus() . PHP_EOL;
+            if ($response->getStatus() == 200) {
+                fwrite($verified, DP . $line . WP_ADMIN_PATH . PHP_EOL);
+            } else {
+                fwrite($bad, $line . PHP_EOL);
+            }
         } catch (Exception $e) {
             echo $e->getCode() . PHP_EOL;
         }
