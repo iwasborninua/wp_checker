@@ -50,7 +50,7 @@ try {
             ->followRedirects(0)
             ->build();
 
-        yield each($iterator, new LocalSemaphore(30), function ($line) use ($client, $client_disable_redirect, $verified, $bad) {
+        yield each($iterator, new LocalSemaphore(50), function ($line) use ($client, $client_disable_redirect, $verified, $bad) {
             $request = new Request( DP . $line . WP_ADMIN_PATH);
             $request->setTcpConnectTimeout(2400);
             try {
