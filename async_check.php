@@ -41,7 +41,7 @@ try {
         $iterator = new Producer(function ($emit) {
             $file = fopen('data/domains.txt', 'r');
             while (false !== $line = fgets($file)) {
-                yield $emit(trim($line));
+                    yield $emit(trim($line));
             }
         });
 
@@ -51,9 +51,10 @@ try {
             ->build();
 
         yield each($iterator, new LocalSemaphore(50), function ($line) use ($client, $client_disable_redirect, $verified, $bad) {
-            $request = new Request( DP . $line . WP_ADMIN_PATH);
-            $request->setTcpConnectTimeout(2400);
             try {
+                $request = new Request( DP . $line . WP_ADMIN_PATH);
+                $request->setTcpConnectTimeout(2400);
+
                 $response = yield $client->request($request);
                 if ($response->getStatus() == 200) {
                     $login_form = (new Crawler((string) yield $response->getBody()->buffer()))
