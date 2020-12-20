@@ -32,61 +32,71 @@ Dns\resolver(new Dns\Rfc1035StubResolver(null, new class implements Dns\ConfigLo
     }
 }));
 
-Loop::run(function () use ($verified, $bad) {
-    $iterator = new Producer(function ($emit) {
-        $file = fopen('data/domains.txt', 'r');
-        while (false !== $line = fgets($file)) {
-            yield $emit(trim($line));
-        }
-    });
+Loop::setErrorHandler(function (\Throwable $e) {
+    echo "error handler -> " . $e->getMessage() . PHP_EOL;
+});
 
-    $client = HttpClientBuilder::buildDefault();
-    $client_disable_redirect = (new HttpClientBuilder())
-        ->followRedirects(0)
-        ->build();
+try {
+    Loop::run(function () use ($verified, $bad) {
+        $iterator = new Producer(function ($emit) {
+            $file = fopen('data/domains.txt', 'r');
+            while (false !== $line = fgets($file)) {
+                yield $emit(trim($line));
+            }
+        });
 
-    yield each($iterator, new LocalSemaphore(30), function ($line) use ($client, $client_disable_redirect, $verified, $bad) {
-        $request = new Request( DP . $line . WP_ADMIN_PATH);
-        $request->setTcpConnectTimeout(2400);
-        try {
-            $response = yield $client->request($request);
-            if ($response->getStatus() == 200) {
-                $login_form = (new Crawler((string) yield $response->getBody()->buffer()))
-                    ->filter('form#loginform')->count();
-                if ($login_form > 0) {
-                    $author_request = new Request(DP . $line . AUTHOR_DORK);
-                    $author_request->setTcpConnectTimeout(2400);
-                    $response = yield $client_disable_redirect->request($author_request);
+        $client = HttpClientBuilder::buildDefault();
+        $client_disable_redirect = (new HttpClientBuilder())
+            ->followRedirects(0)
+            ->build();
 
-                    if ($response->getStatus() == "301") {
-                        $location = $response->getHeaders()['location'][0];
-                        $location_array = array_diff(explode('/', $location), LOCATION_URL_RULES);
-                        $login = end($location_array);
+        yield each($iterator, new LocalSemaphore(30), function ($line) use ($client, $client_disable_redirect, $verified, $bad) {
+            $request = new Request( DP . $line . WP_ADMIN_PATH);
+            $request->setTcpConnectTimeout(2400);
+            try {
+                $response = yield $client->request($request);
+                if ($response->getStatus() == 200) {
+                    $login_form = (new Crawler((string) yield $response->getBody()->buffer()))
+                        ->filter('form#loginform')->count();
+                    if ($login_form > 0) {
+                        $author_request = new Request(DP . $line . AUTHOR_DORK);
+                        $author_request->setTcpConnectTimeout(2400);
+                        $response = yield $client_disable_redirect->request($author_request);
 
-                        if (count($location_array) == 2 && $line != end($location_array)) {
-                            echo "verifed|login: {$line}" . PHP_EOL;
-                            $url = DP . $line . "/wp-login.php;" . $login;
+                        if ($response->getStatus() == "301") {
+                            $location = $response->getHeaders()['location'][0];
+                            $location_array = array_diff(explode('/', $location), LOCATION_URL_RULES);
+                            $login = end($location_array);
+
+                            if (count($location_array) >= 2 && $line != end($location_array)) {
+                                echo "verifed|login: {$line}" . PHP_EOL;
+                                $url = DP . $line . "/wp-login.php;" . $login;
+                            } else {
+                                echo "verifed: {$line}" . PHP_EOL;
+                                $url = DP . $line . WP_ADMIN_PATH;
+                            }
+
+                            fwrite($verified, $url . PHP_EOL);
                         } else {
                             echo "verifed: {$line}" . PHP_EOL;
-                            $url = DP . $line . WP_ADMIN_PATH;
+                            fwrite($verified, DP . $line . WP_ADMIN_PATH . PHP_EOL);
                         }
 
-                        fwrite($verified, $url . PHP_EOL);
+
                     } else {
-                        echo "verifed: {$line}" . PHP_EOL;
-                        fwrite($verified, DP . $line . WP_ADMIN_PATH . PHP_EOL);
+                        echo "form not found: {$line}" . PHP_EOL;
+                        fwrite($bad,$line. PHP_EOL);
                     }
-
-
                 } else {
-                    echo "form not found: {$line}" . PHP_EOL;
-                    fwrite($bad,$line. PHP_EOL);
+                    fwrite($bad, $line . PHP_EOL);
                 }
-            } else {
-                fwrite($bad, $line . PHP_EOL);
+            } catch (Exception $e) {
+                echo "Bad request: " . $line . PHP_EOL;
             }
-        } catch (Exception $e) {
-            echo "Bad request: " . $line . PHP_EOL;
-        }
+        });
     });
-});
+} catch (Throwable $loopException) {
+    echo "loop bubbled exception caught -> " . $loopException->getMessage() . PHP_EOL;
+}
+
+echo "Скрипт отработал корректно.";
