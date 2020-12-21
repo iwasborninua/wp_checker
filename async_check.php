@@ -38,6 +38,8 @@ Dns\resolver(new Dns\Rfc1035StubResolver(null, new class implements Dns\ConfigLo
 
 Loop::setErrorHandler(function (\Throwable $e) {
     echo "error handler -> " . $e->getMessage() . PHP_EOL;
+    Loop::stop();
+    exit($e->getMessage() . PHP_EOL);
 });
 
 try {
