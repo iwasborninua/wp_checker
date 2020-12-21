@@ -50,7 +50,9 @@ try {
             }
         });
 
-
+        yield each($emit, new LocalSemaphore(5), function ($line) {
+            echo $line . PHP_EOL;
+        });
 
 
     });

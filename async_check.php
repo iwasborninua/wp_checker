@@ -1,4 +1,8 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+
+
 require 'vendor/autoload.php';
 require 'lib/functions.php';
 
@@ -40,8 +44,14 @@ try {
     Loop::run(function () use ($verified, $bad) {
         $iterator = new Producer(function ($emit) {
             $file = fopen('data/domains.txt', 'r');
-            while (false !== $line = fgets($file)) {
+            $i = 0;
+            try {
+                while (false !== $line = fgets($file)) {
+                    $i++;
                     yield $emit(trim($line));
+                }
+            } finally {
+                var_dump("END OF FILE AT LINE {$i}");
             }
         });
 
@@ -91,8 +101,8 @@ try {
                 } else {
                     fwrite($bad, $line . PHP_EOL);
                 }
-            } catch (Exception $e) {
-                echo "Bad request: " . $line . PHP_EOL;
+            } catch (\Throwable $e) {
+                echo $e->getMessage() . PHP_EOL;
             }
         });
     });
