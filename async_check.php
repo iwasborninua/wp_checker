@@ -20,6 +20,7 @@ use function Amp\Sync\ConcurrentIterator\each;
 
 $verified = fopen('data/verified.txt', 'w+');
 $bad = fopen('data/bad.txt', 'w+');
+$dns_fail = fopen('data/dns_fail.txt', 'w+');
 
 // Устанавливаем конфиг гугловского DNS
 Dns\resolver(new Dns\Rfc1035StubResolver(null, new class implements Dns\ConfigLoader {
@@ -43,7 +44,7 @@ Loop::setErrorHandler(function (\Throwable $e) {
 });
 
 try {
-    Loop::run(function () use ($verified, $bad) {
+    Loop::run(function () use ($verified, $bad, $dns_fail) {
         $iterator = new Producer(function ($emit) {
             $file = fopen('data/domains.txt', 'r');
             $i = 0;
@@ -62,7 +63,7 @@ try {
             ->followRedirects(0)
             ->build();
 
-        yield each($iterator, new LocalSemaphore(50), function ($line) use ($client, $client_disable_redirect, $verified, $bad) {
+        yield each($iterator, new LocalSemaphore(50), function ($line) use ($client, $client_disable_redirect, $verified, $bad, $dns_fail) {
             try {
                 $request = new Request( DP . $line . WP_ADMIN_PATH);
                 $request->setTcpConnectTimeout(2400);
@@ -104,7 +105,7 @@ try {
                     fwrite($bad, $line . PHP_EOL);
                 }
             } catch (DnsException $e) {
-
+                fwrite($dns_fail, $line . " :" . $dns_fail);
             } catch (\Throwable $e) {
                 echo $e->getMessage() . PHP_EOL;
             }
