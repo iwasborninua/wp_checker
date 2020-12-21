@@ -104,6 +104,8 @@ try {
                     fwrite($bad, $line . PHP_EOL);
                 }
             } catch (DnsException $e) {
+
+            } catch (\Throwable $e) {
                 echo $e->getMessage() . PHP_EOL;
             }
         });
