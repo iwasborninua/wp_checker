@@ -103,8 +103,8 @@ try {
                 } else {
                     fwrite($bad, $line . PHP_EOL);
                 }
-            } catch (\Throwable $e) {
-                echo "bad request: {$line}" . PHP_EOL;
+            } catch (DnsException $e) {
+                echo $e->getMessage() . PHP_EOL;
             }
         });
     });
