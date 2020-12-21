@@ -104,7 +104,7 @@ try {
                     fwrite($bad, $line . PHP_EOL);
                 }
             } catch (\Throwable $e) {
-                echo $e->getMessage() . PHP_EOL;
+                echo "bad request: {$line}" . PHP_EOL;
             }
         });
     });
