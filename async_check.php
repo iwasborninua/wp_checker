@@ -23,16 +23,17 @@ $bad = fopen('data/bad.txt', 'w+');
 $dns_fail = fopen('data/dns_fail.txt', 'w+');
 
 // Устанавливаем конфиг гугловского DNS
-Dns\resolver(new Dns\Rfc1035StubResolver(null, new class implements Dns\ConfigLoader {
+$dnsCache = new Amp\Cache\FileCache('data/dns/', new Amp\Sync\LocalKeyedMutex());
+Dns\resolver(new Dns\Rfc1035StubResolver($dnsCache, new class implements Dns\ConfigLoader {
     public function loadConfig(): Promise
     {
         return Amp\call(function () {
             $hosts = yield (new Dns\HostLoader)->loadHosts();
 
             return new Dns\Config([
-                "8.8.8.8:53",
-                "[2001:4860:4860::8888]:53",
-            ], $hosts, $timeout = 5000, $attempts = 3);
+                '1.1.1.1:53',
+                '8.8.8.8:53',
+            ], $hosts, $timeout = 10000, $attempts = 10);
         });
     }
 }));
@@ -50,7 +51,6 @@ try {
             $i = 0;
             try {
                 while (false !== $line = fgets($file)) {
-                    $i++;
                     yield $emit(trim($line));
                 }
             } finally {
