@@ -52,7 +52,7 @@ try {
             ->followRedirects(0)
             ->build();
 
-        yield each($iterator, new LocalSemaphore(50), function ($line) use ($client, $client_disable_redirect, $verified, $bad, $dns_fail) {
+        yield each($iterator, new LocalSemaphore(50), function ($line) use ($client, $client_disable_redirect, $verified, $bad) {
             try {
                 $request = new Request( DP . $line . WP_ADMIN_PATH);
                 $request->setTcpConnectTimeout(2400);
@@ -84,8 +84,6 @@ try {
                             echo "verifed: {$line}" . PHP_EOL;
                             fwrite($verified, DP . $line . WP_ADMIN_PATH . PHP_EOL);
                         }
-
-
                     } else {
                         echo "form not found: {$line}" . PHP_EOL;
                         fwrite($bad,$line. PHP_EOL);
@@ -93,8 +91,6 @@ try {
                 } else {
                     fwrite($bad, $line . PHP_EOL);
                 }
-            } catch (DnsException $e) {
-                fwrite($dns_fail, $line . " :" . $dns_fail);
             } catch (\Throwable $e) {
                 echo $e->getMessage() . PHP_EOL;
             }
