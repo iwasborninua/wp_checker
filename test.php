@@ -1,10 +1,4 @@
 <?php
-error_reporting(E_ALL);
-ini_set('display_errors', '1');
-
-
-require 'vendor/autoload.php';
-require 'lib/functions.php';
 
 use Amp\Delayed;
 use Amp\Dns;
@@ -18,26 +12,16 @@ use Amp\Http\Client\Request;
 use Symfony\Component\DomCrawler\Crawler;
 use function Amp\Sync\ConcurrentIterator\each;
 
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+
+require 'vendor/autoload.php';
+require 'lib/functions.php';
+
+setDNS($dns_ips);
+
 $verified = fopen('data/verified.txt', 'w+');
 $bad = fopen('data/bad.txt', 'w+');
-$dns_fail = fopen('data/dns_fail.txt', 'w+');
-
-// Устанавливаем конфиг гугловского DNS
-//$dnsCache = new Amp\Cache\FileCache('data/dns/', new Amp\Sync\LocalKeyedMutex());
-
-Dns\resolver(new Dns\Rfc1035StubResolver($dnsCache, new class implements Dns\ConfigLoader {
-    public function loadConfig(): Promise
-    {
-        return Amp\call(function () {
-            $hosts = yield (new Dns\HostLoader)->loadHosts();
-
-            return new Dns\Config([
-                '1.1.1.1:53',
-                '8.8.8.8:53',
-            ], $hosts, $timeout = 10000, $attempts = 10);
-        });
-    }
-}));
 
 Loop::setErrorHandler(function (\Throwable $e) {
     echo "error handler -> " . $e->getMessage() . PHP_EOL;
@@ -46,7 +30,11 @@ Loop::setErrorHandler(function (\Throwable $e) {
 });
 
 try {
-    Loop::run(function () use ($verified, $bad, $dns_fail) {
+    Loop::run(function () use ($verified, $bad, $dns_ips) {
+        Loop::repeat(300000, function () {
+            setDNS($dns_ips);
+        });
+
         $iterator = new Producer(function ($emit) {
             $file = fopen('data/domains.txt', 'r');
             $i = 0;
