@@ -48,6 +48,19 @@ Dns\resolver(new class implements Dns\Resolver {
     public function __construct() {
         $this->resolvers[] = new Dns\Rfc1035StubResolver(null, new CustomConfigLoader(['1.1.1.1:53', '1.0.0.1:53']));
         $this->resolvers[] = new Dns\Rfc1035StubResolver(null, new CustomConfigLoader(['8.8.8.8:53', '8.8.4.4:53']));
+        $this->resolvers[] = new Dns\Rfc1035StubResolver(null, new CustomConfigLoader(['208.67.222.222:53', '208.67.220.220:53']));
+        $this->resolvers[] = new Dns\Rfc1035StubResolver(null, new CustomConfigLoader([
+            '209.244.0.3:53',
+            '209.244.0.4:53',
+            '4.2.2.1:53',
+            '4.2.2.2:53',
+            '4.2.2.3:53',
+            '4.2.2.4:53'
+        ]));
+        $this->resolvers[] = new Dns\Rfc1035StubResolver(null, new CustomConfigLoader([
+            '8.26.56.26:53',
+            '8.20.247.20:53'
+        ]));
     }
     public function getResolver() : Dns\Resolver {
         return $this->resolvers[array_rand($this->resolvers)];
@@ -80,9 +93,9 @@ try {
             }
         });
 
-        $client = (new HttpClientBuilder())->retry(10)->build();
+        $client = (new HttpClientBuilder())->retry(3)->build();
         $client_disable_redirect = (new HttpClientBuilder())
-            ->retry(10)
+            ->retry(3)
             ->followRedirects(0)
             ->build();
 
