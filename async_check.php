@@ -25,19 +25,40 @@ $dns_fail = fopen('data/dns_fail.txt', 'w+');
 // Устанавливаем конфиг гугловского DNS
 //$dnsCache = new Amp\Cache\FileCache('data/dns/', new Amp\Sync\LocalKeyedMutex());
 
-Dns\resolver(new Dns\Rfc1035StubResolver($dnsCache, new class implements Dns\ConfigLoader {
+class CustomConfigLoader implements Dns\ConfigLoader
+{
+    protected $dns;
+    public function __construct(array $dns)
+    {
+        $this->dns = $dns;
+    }
+
     public function loadConfig(): Promise
     {
         return Amp\call(function () {
             $hosts = yield (new Dns\HostLoader)->loadHosts();
 
-            return new Dns\Config([
-                '1.1.1.1:53',
-                '8.8.8.8:53',
-            ], $hosts, $timeout = 10000, $attempts = 10);
+            return new Dns\Config($this->dns, $hosts, $timeout = 10000, $attempts = 10);
         });
     }
-}));
+}
+
+Dns\resolver(new class implements Dns\Resolver {
+    protected $resolvers = [];
+    public function __construct() {
+        $this->resolvers[] = new Dns\Rfc1035StubResolver(null, new CustomConfigLoader(['1.1.1.1:53', '1.0.0.1:53']));
+        $this->resolvers[] = new Dns\Rfc1035StubResolver(null, new CustomConfigLoader(['8.8.8.8:53', '8.8.4.4:53']));
+    }
+    public function getResolver() : Dns\Resolver {
+        return $this->resolvers[array_rand($this->resolvers)];
+    }
+    public function resolve(string $name, int $typeRestriction = null) : \Amp\Promise {
+        return $this->getResolver()->resolve($name, $typeRestriction);
+    }
+    public function query(string $name, int $type) : \Amp\Promise {
+        return $this->getResolver()->resolve($name, $typeRestriction);
+    }
+});
 
 Loop::setErrorHandler(function (\Throwable $e) {
     echo "error handler -> " . $e->getMessage() . PHP_EOL;
@@ -59,8 +80,9 @@ try {
             }
         });
 
-        $client = HttpClientBuilder::buildDefault();
+        $client = (new HttpClientBuilder())->retry(10)->build();
         $client_disable_redirect = (new HttpClientBuilder())
+            ->retry(10)
             ->followRedirects(0)
             ->build();
 
