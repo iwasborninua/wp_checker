@@ -123,6 +123,7 @@ try {
                                 $url = DP . $line . "/wp-login.php;" . $login;
                             } else {
                                 echo "verifed: {$line}" . PHP_EOL;
+                                echo round(memory_get_usage(true) / 1024 / 1024, 2) . 'MB' . PHP_EOL;
                                 $url = DP . $line . WP_ADMIN_PATH;
                             }
 
