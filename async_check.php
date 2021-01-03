@@ -17,6 +17,7 @@ use Amp\Sync\LocalSemaphore;
 use Amp\Http\Client\Request;
 use Symfony\Component\DomCrawler\Crawler;
 use function Amp\Sync\ConcurrentIterator\each;
+use function Amp\Sync\ConcurrentIterator\filter;
 
 $verified = fopen('data/verified.txt', 'w+');
 $bad = fopen('data/bad.txt', 'w+');
@@ -61,18 +62,18 @@ Dns\resolver(new class implements Dns\Resolver {
 });
 
 Loop::setErrorHandler(function (\Throwable $e) {
+    // Loop::stop();
     echo "error handler -> " . $e->getMessage() . PHP_EOL;
-    Loop::stop();
-    exit($e->getMessage() . PHP_EOL);
+    echo (string) $e . PHP_EOL;
+    // exit();
 });
 
 try {
     Loop::run(function () use ($verified, $bad, $dns_fail) {
         $iterator = new Producer(function ($emit) {
             $file = fopen('data/domains.txt', 'r');
-            $i = 0;
             try {
-                while (false !== $line = fgets($file)) {
+                for ($i = 0; false !== $line = fgets($file); $i++) {
                     yield $emit(trim($line));
                 }
             } finally {
@@ -86,7 +87,10 @@ try {
             ->followRedirects(0)
             ->build();
 
+        $iterator = filter($iterator, new LocalSemaphore(50), fn ($line) => Amp\Dns\isValidName($line));
         yield each($iterator, new LocalSemaphore(50), function ($line) use ($client, $client_disable_redirect, $verified, $bad, $dns_fail) {
+            $retries = 0;
+            start:
             try {
                 $request = new Request( DP . $line . WP_ADMIN_PATH);
                 $request->setTcpConnectTimeout(2400);
@@ -106,31 +110,49 @@ try {
                             $login = end($location_array);
 
                             if (count($location_array) >= 2 && $line != end($location_array)) {
-                                echo "verifed|login: {$line}" . PHP_EOL;
+                                echo __LINE__ . ': ' ."verifed|login: {$line}". ' ' . round(memory_get_usage(true) / 1024 / 1024, 2) . 'MB' . PHP_EOL;
                                 $url = DP . $line . "/wp-login.php;" . $login;
                             } else {
-                                echo "verifed: {$line}" . PHP_EOL;
+                                echo __LINE__ . ': ' ."verifed: {$line}". ' ' . round(memory_get_usage(true) / 1024 / 1024, 2) . 'MB' . PHP_EOL;
                                 $url = DP . $line . WP_ADMIN_PATH;
                             }
 
                             fwrite($verified, $url . PHP_EOL);
                         } else {
-                            echo "verifed: {$line}" . PHP_EOL;
+                            echo __LINE__ . ': ' ."verifed: {$line}". ' ' . round(memory_get_usage(true) / 1024 / 1024, 2) . 'MB' . PHP_EOL;
                             fwrite($verified, DP . $line . WP_ADMIN_PATH . PHP_EOL);
                         }
 
-
                     } else {
-                        echo "form not found: {$line}" . PHP_EOL;
+                        echo __LINE__ . ': ' ."form not found: {$line}". ' ' . round(memory_get_usage(true) / 1024 / 1024, 2) . 'MB' . PHP_EOL;
                         fwrite($bad,$line. PHP_EOL);
                     }
                 } else {
                     fwrite($bad, $line . PHP_EOL);
                 }
             } catch (DnsException $e) {
-                fwrite($dns_fail, $line . " :" . $dns_fail);
-            } catch (\Throwable $e) {
-                echo $e->getMessage() . PHP_EOL;
+                fwrite($dns_fail, $line . PHP_EOL);
+            } catch (
+                Amp\Http\Client\Connection\UnprocessedRequestException
+                | Amp\Http\Client\SocketExceptionReceiving
+                | Amp\Http\Client\TimeoutException
+                | Amp\Http\Client\Connection\Http2ConnectionException
+                | Amp\Http\Client\Connection\Http2StreamException
+                | Amp\Http\Client\Interceptor\TooManyRedirectsException
+                | Amp\Http\Client\SocketException $e
+            ) {
+                // nothing to do
+                return;
+                
+                if ($retries++ < 3) {
+                    echo '### RETRY ' . $retries . ' : ' . $line . PHP_EOL;
+                    goto start;
+                }
+                // throw $e->getPrevious();
+            } catch (Throwable $e) {
+                echo __LINE__ . ': ' .get_class($e) . $e->getMessage() . PHP_EOL;
+                echo __LINE__ . (string) $e . PHP_EOL;
+                echo __LINE__ . ': ' .round(memory_get_usage(true) / 1024 / 1024, 2) . 'MB' . PHP_EOL;
             }
         });
     });
