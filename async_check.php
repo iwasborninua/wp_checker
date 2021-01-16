@@ -1,7 +1,8 @@
 <?php
 error_reporting(E_ALL);
-ini_set('display_errors', '1');
-
+ini_set('display_startup_errors', 1);
+ini_set('display_errors', 1);
+ini_set('memory_limit', '2048M');
 
 require 'vendor/autoload.php';
 require 'lib/functions.php';
@@ -14,53 +15,24 @@ use Amp\Loop;
 use Amp\Promise;
 use Amp\Producer;
 use Amp\Sync\LocalSemaphore;
-use Amp\Http\Client\Request;
-use Symfony\Component\DomCrawler\Crawler;
+use Monolog\ErrorHandler;
+use function Amp\Iterator\filter;
+use function Amp\Dns\resolver;
+use function Amp\Dns\isValidName;
 use function Amp\Sync\ConcurrentIterator\each;
+use app\dns\Resolver;
+use app\Log;
+use app\Parser;
 
-$verified = fopen('data/verified.txt', 'w+');
-$bad = fopen('data/bad.txt', 'w+');
-$dns_fail = fopen('data/dns_fail.txt', 'w+');
-
-// Устанавливаем конфиг гугловского DNS
-//$dnsCache = new Amp\Cache\FileCache('data/dns/', new Amp\Sync\LocalKeyedMutex());
-
-class CustomConfigLoader implements Dns\ConfigLoader
-{
-    protected $dns;
-    public function __construct(array $dns)
-    {
-        $this->dns = $dns;
-    }
-
-    public function loadConfig(): Promise
-    {
-        return Amp\call(function () {
-            $hosts = yield (new Dns\HostLoader)->loadHosts();
-
-            return new Dns\Config($this->dns, $hosts, $timeout = 10000, $attempts = 10);
-        });
-    }
-}
+ErrorHandler::register(Log::getLogger());
+Loop::setErrorHandler([Log::class, 'critical']);
+resolver(new Resolver());
 
 Dns\resolver(new class implements Dns\Resolver {
     protected $resolvers = [];
     public function __construct() {
         $this->resolvers[] = new Dns\Rfc1035StubResolver(null, new CustomConfigLoader(['1.1.1.1:53', '1.0.0.1:53']));
         $this->resolvers[] = new Dns\Rfc1035StubResolver(null, new CustomConfigLoader(['8.8.8.8:53', '8.8.4.4:53']));
-        $this->resolvers[] = new Dns\Rfc1035StubResolver(null, new CustomConfigLoader(['208.67.222.222:53', '208.67.220.220:53']));
-        $this->resolvers[] = new Dns\Rfc1035StubResolver(null, new CustomConfigLoader([
-            '209.244.0.3:53',
-            '209.244.0.4:53',
-            '4.2.2.1:53',
-            '4.2.2.2:53',
-            '4.2.2.3:53',
-            '4.2.2.4:53'
-        ]));
-        $this->resolvers[] = new Dns\Rfc1035StubResolver(null, new CustomConfigLoader([
-            '8.26.56.26:53',
-            '8.20.247.20:53'
-        ]));
     }
     public function getResolver() : Dns\Resolver {
         return $this->resolvers[array_rand($this->resolvers)];
@@ -93,9 +65,9 @@ try {
             }
         });
 
-        $client = (new HttpClientBuilder())->retry(3)->build();
+        $client = (new HttpClientBuilder())->retry(10)->build();
         $client_disable_redirect = (new HttpClientBuilder())
-            ->retry(3)
+            ->retry(10)
             ->followRedirects(0)
             ->build();
 
@@ -123,7 +95,6 @@ try {
                                 $url = DP . $line . "/wp-login.php;" . $login;
                             } else {
                                 echo "verifed: {$line}" . PHP_EOL;
-                                echo round(memory_get_usage(true) / 1024 / 1024, 2) . 'MB' . PHP_EOL;
                                 $url = DP . $line . WP_ADMIN_PATH;
                             }
 
