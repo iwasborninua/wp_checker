@@ -35,13 +35,18 @@ function getTest(&$hui) {
 function setDNS(&$dns_ips) {
     $current_dns = array(current($dns_ips));
 
-    Dns\resolver(new Dns\Rfc1035StubResolver(null, new class implements Dns\ConfigLoader {
+    Dns\resolver(new Dns\Rfc1035StubResolver(null, new class ($current_dns) implements Dns\ConfigLoader {
+        protected $dns;
+        public function __construct(array $current_dns)
+        {
+            $this->dns = $current_dns;
+        }
         public function loadConfig(): Promise
         {
-            return Amp\call(function ($current_dns) {
+            return Amp\call(function () {
                 $hosts = yield (new Dns\HostLoader)->loadHosts();
 
-                return new Dns\Config($current_dns, $hosts, $timeout = 5000, $attempts = 2);
+                return new Dns\Config($this->dns, $hosts, $timeout = 5000, $attempts = 2);
             });
         }
     }));
