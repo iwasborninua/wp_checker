@@ -37,7 +37,8 @@ Loop::run(function () {
 
     $iterator = filter($iterator, fn ($line) => isValidName($line));
     $parser = new Parser();
-    yield each($iterator, new LocalSemaphore(50), $parser);
+
+    yield each($iterator, new LocalSemaphore(30), $parser);
 });
 
 Log::debug('DONE');
