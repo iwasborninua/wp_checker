@@ -5,7 +5,6 @@ namespace app;
 use Exception;
 use Generator;
 use Throwable;
-use Amp\Promise;
 use Amp\Dns\DnsException;
 use Amp\Http\Client\HttpClientBuilder;
 use Amp\Http\Client\Request;

@@ -6,12 +6,14 @@ namespace app;
 
 use Amp\Dns\DnsException;
 use Amp\Http\Client\HttpClientBuilder;
+use Amp\Http\Client\Request;
 
 class Brute
 {
     protected $client;
     protected $dir;
 
+    private $url;
     private $login;
     private $password;
 
@@ -20,23 +22,16 @@ class Brute
         $this->client = (new HttpClientBuilder())
             ->retry(3)
             ->build();
-
-        $dataDir = dirname(__DIR__) . '/data/';
-        if (!is_dir($dataDir) || !is_writable($dataDir)) {
-            throw new Exception($dataDir . ' is not directory or not writeable');
-        }
-
-        $this->dir = $dataDir . date('Y-m-d-h-m');
-        mkdir($this->dir, 0777);
     }
 
     public function __invoke($data)
     {
         $this->loginCheck($data);
+        $this->password = $data['password'];
 
-
-//        print_r(explode(';', $data['url']));die;
-        print_r($this->login);die;
+        if ($this->login != null) {
+            $this->wpRequest(explode(';', $data['url'])[0]);
+        }
     }
 
     public function loginCheck($data) {
@@ -47,5 +42,15 @@ class Brute
         } else {
             $this->login = $data['login'];
         }
+    }
+
+    public function wpRequest($url) {
+        $request = new Request($url);
+        $request->setTcpConnectTimeout(2400);
+
+        $response = yield $this->client->request($request);
+
+        echo "<pre>";
+        print_r('121212121212');die;
     }
 }
