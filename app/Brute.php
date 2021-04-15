@@ -11,7 +11,6 @@ use Amp\Http\Client\Request;
 class Brute
 {
     protected $client;
-    protected $dir;
 
     private $url;
     private $login;
@@ -21,6 +20,7 @@ class Brute
     {
         $this->client = (new HttpClientBuilder())
             ->retry(3)
+            ->followRedirects(0)
             ->build();
     }
 
@@ -28,10 +28,16 @@ class Brute
     {
         $this->loginCheck($data);
         $this->password = $data['password'];
+        $this->url = explode(';', $data['url'])[0];
 
-        if ($this->login != null) {
-            $this->wpRequest(explode(';', $data['url'])[0]);
-        }
+
+        $request = new Request($this->url);
+        $request->setTcpConnectTimeout(2400);
+        
+
+
+
+//        yield from $this->request(explode(';', $data['url'])[0]);
     }
 
     public function loginCheck($data) {
@@ -44,13 +50,14 @@ class Brute
         }
     }
 
-    public function wpRequest($url) {
+    public function request($url) {
         $request = new Request($url);
         $request->setTcpConnectTimeout(2400);
 
         $response = yield $this->client->request($request);
 
-        echo "<pre>";
-        print_r('121212121212');die;
+        print_r($originalResponse);die;
+
+
     }
 }
