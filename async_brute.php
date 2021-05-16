@@ -6,7 +6,7 @@ ini_set('display_errors', 1);
 ini_set('memory_limit', '2048M');
 
 require 'vendor/autoload.php';
-require 'lib/functions.php';
+
 
 use Amp\Loop;
 use Amp\Producer;
@@ -49,5 +49,5 @@ Loop::run(function () use ($logins, $passwords) {
 
     $brute = new Brute();
 
-    yield each($iterator, new LocalSemaphore(1), $brute);
+    yield each($iterator, new LocalSemaphore(30), $brute);
 });
