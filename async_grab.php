@@ -9,6 +9,7 @@ require 'vendor/autoload.php';
 
 use Amp\Loop;
 use Amp\Producer;
+use app\Grabber;
 use app\Log;
 use Monolog\ErrorHandler;
 use Amp\Sync\LocalSemaphore;
@@ -16,7 +17,7 @@ use function Amp\Sync\ConcurrentIterator\each;
 
 
 $from = new DateTime('2006-02-01');
-$to = new DateTime('2006-12-31');
+$to = new DateTime('2006-02-31');
 
 
 ErrorHandler::register(Log::getLogger());
@@ -27,20 +28,15 @@ Loop::run(function () use ($from, $to) {
     $iterator = new Producer(function ($emit) use ($from, $to) {
         try {
             while ($from < $to) {
-
+                yield $emit('http://whoistory.com/' . $from->format("Y/m/d"));
+                $from->modify('+ 1 day');
             }
-//            for ($i = 0; false !== $line = fgets($file); $i++) {
-//                yield $emit(trim($line));
-//            }
         } finally {
-            Log::debug("END OF FILE AT LINE {$i}");
+            echo "Что то пошло не так, хуй знает что" . PHP_EOL;
         }
     });
 
-    $iterator = filter($iterator, function ($line) {
-        return isValidName($line);
-    });
-    $parser = new Parser();
+    $grabber = new Grabber();
 
-    yield each($iterator, new LocalSemaphore(30), $parser);
+    yield each($iterator, new LocalSemaphore(30), $grabber);
 });
