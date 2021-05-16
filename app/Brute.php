@@ -23,16 +23,20 @@ class Brute
             ->followRedirects(0)
             ->build();
 
+
+        $this->login     = null;
+        $this->password  = null;
         $this->iteration = true;
     }
 
     public function __invoke($data)
     {
-        $this->password = $data['password'];
         $this->url = explode(';', $data['url'])[0];
 
         $this->loginCheck($data);
+        $this->passwordCheck($data);
         $this->checkIterator($data);
+
 
         if ($this->iteration === true) {
             $body = new FormBody;
@@ -53,6 +57,12 @@ class Brute
         }
     }
 
+    public function checkIterator($data) {
+        if (( $this->login == null && $this->password == null) || ( $data['login'] != '{login}' && $data['login'] == $this->login )) {
+            $this->iteration = false;
+        }
+    }
+
     public function loginCheck($data) {
         if ($data['login'] == '{login}' && !isset(explode(';', $data['url'])[1])) {
             $this->login = null;
@@ -63,18 +73,10 @@ class Brute
         }
     }
 
-    public function checkIterator($data) {
-        if ($this->login == null || ( $data['login'] != '{login}' && $data['login'] == $this->login )) {
-            $this->iteration = false;
-        }
-    }
-
-    public function request($url) {
-        $request = new Request($url);
-        $request->setTcpConnectTimeout(2400);
-
-        $response = yield $this->client->request($request);
-
-        print_r($response);die;
+    public function passwordCheck($data) {
+        if ($data['password'] == '{login}' && $this->login != null)
+            $this->password = $this->login;
+        else
+            $this->password = $data['password'];
     }
 }

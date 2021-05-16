@@ -42,7 +42,7 @@ class Grabber
                 $this->domains .= $domain->textContent . PHP_EOL;
             }
 
-            file_put_contents('hui.txt', $this->domains, FILE_APPEND);
+            file_put_contents('data/domains.txt', $this->domains, FILE_APPEND);
         }
     }
 }

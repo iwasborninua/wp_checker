@@ -40,7 +40,7 @@ Loop::run(function () {
     });
     $parser = new Parser();
 
-    yield each($iterator, new LocalSemaphore(30), $parser);
+    yield each($iterator, new LocalSemaphore(50), $parser);
 });
 
 Log::debug('DONE');
