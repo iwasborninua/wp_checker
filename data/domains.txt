@@ -1,3 +1,1 @@
-wp.loc
-wp1.loc
 wordpress.loc

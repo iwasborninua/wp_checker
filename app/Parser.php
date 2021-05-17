@@ -4,6 +4,7 @@ namespace app;
 
 use Exception;
 use Generator;
+use Monolog\Logger;
 use Throwable;
 use Amp\Dns\DnsException;
 use Amp\Http\Client\HttpClientBuilder;

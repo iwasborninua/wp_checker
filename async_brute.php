@@ -6,7 +6,7 @@ ini_set('display_errors', 1);
 ini_set('memory_limit', '2048M');
 
 require 'vendor/autoload.php';
-
+require 'lib/functions.php';
 
 use Amp\Loop;
 use Amp\Producer;
@@ -28,7 +28,7 @@ resolver(new Resolver());
 
 
 Loop::run(function () use ($logins, $passwords) {
-    $iterator = new Producer(function ($emit) use ($passwords, $logins) {
+    $iterator = new Producer(function ($emit) use ($logins, $passwords) {
         foreach ($logins as $login) {
             foreach ($passwords as $password) {
                 $verified  = fopen('data/verified.txt', 'r+');

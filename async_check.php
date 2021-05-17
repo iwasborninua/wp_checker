@@ -7,10 +7,14 @@ ini_set('memory_limit', '2048M');
 
 require 'vendor/autoload.php';
 
+use Amp\Http\Client\HttpClientBuilder;
 use Amp\Loop;
 use Amp\Producer;
 use Amp\Sync\LocalSemaphore;
+use app\Telegram;
 use Monolog\ErrorHandler;
+use Monolog\Handler\TelegramBotHandler;
+use Monolog\Logger;
 use function Amp\Iterator\filter;
 use function Amp\Dns\resolver;
 use function Amp\Dns\isValidName;
@@ -41,6 +45,8 @@ Loop::run(function () {
     $parser = new Parser();
 
     yield each($iterator, new LocalSemaphore(50), $parser);
+
+    (new Telegram())->sendMessage('Чекер закончил работу.');
 });
 
 Log::debug('DONE');
