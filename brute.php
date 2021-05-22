@@ -49,5 +49,5 @@ Loop::run(function () use ($logins, $passwords) {
 
     $brute = new Brute();
 
-    yield each($iterator, new LocalSemaphore(30), $brute);
+    yield each($iterator, new LocalSemaphore(5), $brute);
 });

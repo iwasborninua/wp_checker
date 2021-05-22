@@ -111,7 +111,7 @@ class Parser
         }
     }
 
-    protected function parse(string $domain, Response $response) : Generator
+    protected function  parse(string $domain, Response $response) : Generator
     {
         $body = yield $response->getBody()->buffer();
         $loginForm = (new Crawler($body))->filter(static::FORM_CSS_SELECTOR);

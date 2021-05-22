@@ -1,0 +1,1 @@
+http://wordpress.loc/wp-login.php;admin

