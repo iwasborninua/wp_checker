@@ -13,6 +13,7 @@ use Amp\Producer;
 use app\Brute;
 use app\dns\Resolver;
 use app\Log;
+use app\Telegram;
 use Monolog\ErrorHandler;
 use Amp\Sync\LocalSemaphore;
 use function Amp\Dns\resolver;
@@ -49,5 +50,7 @@ Loop::run(function () use ($logins, $passwords) {
 
     $brute = new Brute();
 
-    yield each($iterator, new LocalSemaphore(50), $brute);
+    yield each($iterator, new LocalSemaphore(1), $brute);
+
+    (new Telegram())->sendMessage('Брутер закончил работу.');
 });

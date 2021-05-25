@@ -33,8 +33,14 @@ class Brute
         $password = $this->passwordCheck($data, $login);
         $iteration = $this->checkIterator($data, $login, $password);
 
-        if ($iteration) {
+        if ($iteration == true) {
             $log = new Logger('name');
+
+//            var_dump([
+//                'login' => $login,
+//                'password' => $password,
+//                'iteration' => $iteration,
+//            ]);die;
 
             $body = new FormBody;
             $body->addField('log', $login);
@@ -58,7 +64,7 @@ class Brute
     }
 
     public function checkIterator($data, $login, $password) {
-        if (( $login == null && $password == null) || ( $data['login'] != '{login}' && $data['login'] == $login )) {
+        if (( $login == null || $password == null) || ( $data['login'] != '{login}' && $data['login'] == $login )) {
             return false;
         } else {
             return true;
