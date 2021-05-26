@@ -7,4 +7,4 @@ services:
     volumes:
       - ./:/app/
     working_dir: /app/
-    command: 'php brute.php'
+    command: 'php check.php'

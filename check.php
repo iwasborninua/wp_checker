@@ -42,9 +42,10 @@ Loop::run(function () {
     $iterator = filter($iterator, function ($line) {
         return isValidName($line);
     });
+
     $parser = new Parser();
 
-    yield each($iterator, new LocalSemaphore(50), $parser);
+    yield each($iterator, new LocalSemaphore(1), $parser);
 
     (new Telegram())->sendMessage('Чекер закончил работу.');
 });
