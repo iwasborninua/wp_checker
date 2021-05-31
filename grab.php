@@ -17,7 +17,7 @@ use function Amp\Sync\ConcurrentIterator\each;
 
 
 $from = new DateTime('2014-05-01');
-$to = new DateTime('2014-05-31');
+$to = new DateTime('2014-05-11');
 
 
 ErrorHandler::register(Log::getLogger());
