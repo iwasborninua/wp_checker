@@ -30,10 +30,10 @@ class Telegram
         $body->addField("text", $text);
         $body->addField("chat_id", 165944121);
 
-        $request = new Request('https://api.telegram.org/bot1825782922:AAGAy3Xo7qiV-DG1F7eNwxvYod-5hh7a2_0/SendMessage', 'POST');
+        $request = new Request('https://api.telegram.org/bot1825782922:AAHYXamDly29xOmHaU3CY2UN73vC7sMlTKU/SendMessage', 'POST');
         $request->setBody($body);
 
-        $promise = $this->client->request($request);
+        return $promise = $this->client->request($request);
     }
 
 }
