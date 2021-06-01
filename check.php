@@ -45,7 +45,7 @@ Loop::run(function () {
 
     $parser = new Parser();
 
-    yield each($iterator, new LocalSemaphore(1), $parser);
+    yield each($iterator, new LocalSemaphore(50), $parser);
 
     (new Telegram())->sendMessage('Чекер закончил работу.');
 });
