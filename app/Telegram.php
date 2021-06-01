@@ -33,7 +33,7 @@ class Telegram
         $request = new Request('https://api.telegram.org/bot1825782922:AAGAy3Xo7qiV-DG1F7eNwxvYod-5hh7a2_0/SendMessage', 'POST');
         $request->setBody($body);
 
-        $promise = $this->client->request($request);
+        return $this->client->request($request);
     }
 
 }
