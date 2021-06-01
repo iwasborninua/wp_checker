@@ -1,2 +1,1 @@
 http://wordpress.loc/wp-login.php;admin
-https://iqdemy-print.ru/wp-login.php;admin_y3cbe9zq

