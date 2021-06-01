@@ -51,6 +51,6 @@ Loop::run(function () use ($logins, $passwords) {
     $brute = new Brute();
 
     yield each($iterator, new LocalSemaphore(50), $brute);
-
+    Log::debug('Брутер закончил работу.');
     (new Telegram())->sendMessage('Брутер закончил работу.');
 });

