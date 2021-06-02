@@ -6,6 +6,7 @@
 .idea
 .vendor
 .composer.lock
+/data/
 
 # User-specific stuff
 .idea/**/workspace.xml
