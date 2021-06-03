@@ -17,7 +17,7 @@ use function Amp\Sync\ConcurrentIterator\each;
 
 
 $from = new DateTime('2014-01-01');
-$to = new DateTime('2014-06-01');
+$to = new DateTime('2014-01-11');
 
 
 ErrorHandler::register(Log::getLogger());
@@ -38,7 +38,7 @@ Loop::run(function () use ($from, $to) {
 
     $grabber = new Grabber();
 
-    yield each($iterator, new LocalSemaphore(30), $grabber);
+    yield each($iterator, new LocalSemaphore(3), $grabber);
 });
 
 Log::debug('DONE');

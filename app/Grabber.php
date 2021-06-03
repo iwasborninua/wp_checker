@@ -14,9 +14,7 @@ use function Amp\asyncCall;
 
 class Grabber
 {
-
     protected $client;
-    private   $domains;
 
     public function __construct()
     {
@@ -27,6 +25,7 @@ class Grabber
 
     public function __invoke($url)
     {
+        $domains_list = null;
         echo $url . PHP_EOL;
         $request = new Request($url);
         $request->setTcpConnectTimeout(2400);
@@ -39,10 +38,10 @@ class Grabber
             $domains = (new Crawler($body))->filter('div.left > a:not(.backlink)');
 
             foreach ($domains as $domain) {
-                $this->domains .= $domain->textContent . PHP_EOL;
+                $domains_list .= $domain->textContent . PHP_EOL;
             }
 
-            file_put_contents('data/domains.txt', $this->domains, FILE_APPEND);
+            file_put_contents('data/domains.txt', $domains_list, FILE_APPEND);
         }
     }
 }
