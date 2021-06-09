@@ -4,10 +4,11 @@ error_reporting(E_ALL);
 ini_set('display_startup_errors', 1);
 ini_set('display_errors', 1);
 ini_set('memory_limit', '2048M');
+ini_set('date.timezone', 'Europe/Kiev');
 
 require 'vendor/autoload.php';
 
-use Amp\Http\Client\HttpClientBuilder;
+
 use Amp\Loop;
 use Amp\Producer;
 use Amp\Sync\LocalSemaphore;
@@ -26,6 +27,10 @@ use app\Parser;
 ErrorHandler::register(Log::getLogger());
 Loop::setErrorHandler([Log::class, 'critical']);
 resolver(new Resolver());
+
+$start_date = (new DateTime())->format('Y-d-m H:i:s');
+(new Telegram())->sendMessage("Чекер начал работу в {$start_date}.");
+
 
 Loop::run(function () {
     $iterator = new Producer(function ($emit) {
@@ -47,7 +52,8 @@ Loop::run(function () {
 
     yield each($iterator, new LocalSemaphore(50), $parser);
 
-    (new Telegram())->sendMessage('Чекер закончил работу.');
+    $end_date = (new DateTime())->format('Y-d-m H:i:s');
+    (new Telegram())->sendMessage("Чекер закончил работу в {$end_date}.");
 });
 
 Log::debug('DONE');

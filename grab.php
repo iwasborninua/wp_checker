@@ -4,6 +4,7 @@ error_reporting(E_ALL);
 ini_set('display_startup_errors', 1);
 ini_set('display_errors', 1);
 ini_set('memory_limit', '2048M');
+ini_set('date.timezone', 'Europe/Kiev');
 
 require 'vendor/autoload.php';
 
@@ -16,8 +17,8 @@ use Amp\Sync\LocalSemaphore;
 use function Amp\Sync\ConcurrentIterator\each;
 
 
-$from = new DateTime('2014-01-01');
-$to = new DateTime('2014-01-11');
+$from = new DateTime('2012-01-01');
+$to = new DateTime('2013-01-01');
 
 
 ErrorHandler::register(Log::getLogger());
@@ -38,7 +39,7 @@ Loop::run(function () use ($from, $to) {
 
     $grabber = new Grabber();
 
-    yield each($iterator, new LocalSemaphore(3), $grabber);
+    yield each($iterator, new LocalSemaphore(5), $grabber);
 });
 
 Log::debug('DONE');
