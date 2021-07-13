@@ -33,12 +33,16 @@ Loop::run(function () use ($logins, $passwords) {
         foreach ($logins as $login) {
             foreach ($passwords as $password) {
                 $verified  = fopen('data/verified.txt', 'r+');
-                for ($i = 0; false !== $line = fgets($verified); $i++) {
-                    yield $emit([
-                        'line'     => trim($line),
-                        'login'    => $login,
-                        'password' => $password
-                    ]);
+                try {
+                    for ($i = 0; false !== $line = fgets($verified); $i++) {
+                        yield $emit([
+                            'url'   => trim($line),
+                            'login'    => $login,
+                            'password' => $password
+                        ]);
+                    }
+                } finally {
+                    Log::debug("END OF FILE AT LINE {$i}");
                 }
             }
         }
