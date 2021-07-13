@@ -17,8 +17,8 @@ use Amp\Sync\LocalSemaphore;
 use function Amp\Sync\ConcurrentIterator\each;
 
 
-$from = new DateTime('2012-01-01');
-$to = new DateTime('2013-01-01');
+$from = new DateTime('2006-01-01');
+$to = new DateTime('2007-01-01');
 
 
 ErrorHandler::register(Log::getLogger());

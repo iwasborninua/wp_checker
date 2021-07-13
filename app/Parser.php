@@ -12,10 +12,12 @@ use Amp\Http\Client\Request;
 use Amp\Http\Client\Response;
 use Symfony\Component\DomCrawler\Crawler;
 use function Amp\asyncCall;
+use function GuzzleHttp\default_user_agent;
 
 class Parser
 {
     protected const DEFAULT_SCHEME = 'http://';
+    protected const SECURE_SCHEME = 'https://';
     protected const WP_ADMIN_PATH  = '/wp-login.php';
     protected const WP_AUTHOR_PATH  = '/?author=1';
     protected const VALID_STATUSES = [200];
@@ -85,8 +87,10 @@ class Parser
         $uri = static::DEFAULT_SCHEME . $domain . static::WP_ADMIN_PATH;
         $request = new Request($uri);
         $request->setTcpConnectTimeout(2400);
-
         $response = yield $this->client->request($request);
+
+        $uri = $this->selectScheme($response->getPreviousResponse(), $domain);
+
         if (in_array($response->getStatus(), static::VALID_STATUSES)) {
 
             if (null === $parsed = yield from $this->parse($domain, $response)) {
@@ -142,5 +146,13 @@ class Parser
         }
 
         return null;
+    }
+
+    protected function selectScheme($previosResponse, $domain) {
+        if (null != $previosResponse && null !== strpos($previosResponse->getHeader("Location"), self::SECURE_SCHEME)) {
+            return static::SECURE_SCHEME . $domain . static::WP_ADMIN_PATH;
+        } else {
+            return static::DEFAULT_SCHEME . $domain . static::WP_ADMIN_PATH;
+        }
     }
 }
