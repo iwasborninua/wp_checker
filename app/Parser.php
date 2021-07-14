@@ -84,12 +84,29 @@ class Parser
 
     protected function handle(string $domain) : Generator
     {
-        $uri = static::DEFAULT_SCHEME . $domain . static::WP_ADMIN_PATH;
+        $selected_schema = static::DEFAULT_SCHEME;
+
+        // first query
+        $uri = $selected_schema . $domain;
         $request = new Request($uri);
         $request->setTcpConnectTimeout(2400);
         $response = yield $this->client->request($request);
 
-        $uri = $this->selectScheme($response->getPreviousResponse(), $domain);
+        if ($response->getPreviousResponse()) {
+            $location = $response->getPreviousResponse()->getHeader("Location");
+
+            if (null != $location) {
+                $selected_schema = str_contains($location, self::SECURE_SCHEME) ? self::SECURE_SCHEME : self::DEFAULT_SCHEME;
+                $domain = str_contains($location, 'www') ? 'www.' . $domain : $domain;
+
+                $uri = $selected_schema . $domain . self::WP_ADMIN_PATH;
+            }
+        }
+
+        // second query
+        $request = new Request($uri);
+        $request->setTcpConnectTimeout(2400);
+        $response = yield $this->client->request($request);
 
         if (in_array($response->getStatus(), static::VALID_STATUSES)) {
 
