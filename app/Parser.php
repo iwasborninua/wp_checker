@@ -4,6 +4,7 @@ namespace app;
 
 use Exception;
 use Generator;
+use JetBrains\PhpStorm\Internal\ReturnTypeContract;
 use Monolog\Logger;
 use Throwable;
 use Amp\Dns\DnsException;
@@ -21,6 +22,7 @@ class Parser
     protected const WP_ADMIN_PATH  = '/wp-login.php';
     protected const WP_AUTHOR_PATH  = '/?author=1';
     protected const VALID_STATUSES = [200];
+    protected const REDIRECT_STATUSES = [301, 302, 307, 308];
     protected const FORM_CSS_SELECTOR = 'form#loginform';
 
     protected $client;
@@ -29,7 +31,7 @@ class Parser
     public function __construct()
     {
         $this->client = (new HttpClientBuilder())
-            ->retry(10)
+            ->retry(3)
             ->build();
 
         $dataDir = dirname(__DIR__) . '/data/';
@@ -92,44 +94,57 @@ class Parser
         $request->setTcpConnectTimeout(2400);
         $response = yield $this->client->request($request);
 
-        if ($response->getPreviousResponse()) {
-            $location = $response->getPreviousResponse()->getHeader("Location");
 
-            if (null != $location) {
-                $selected_schema = str_contains($location, self::SECURE_SCHEME) ? self::SECURE_SCHEME : self::DEFAULT_SCHEME;
-                $domain = str_contains($location, 'www') ? 'www.' . $domain : $domain;
 
+        if (in_array($response->getStatus(),self::REDIRECT_STATUSES)) {
+            $this->write("redirect", $domain);
+            return;
+        }
+
+        // if we have valid response...
+        if (in_array($response->getStatus(),self::VALID_STATUSES)) {
+            // Check redirect's to https::// protocol or www subdomain
+            if ($response->getPreviousResponse()) {
+                $location = $response->getPreviousResponse()->getHeader("Location");
+
+                if (null != $location) {
+                    $selected_schema = str_contains($location, self::SECURE_SCHEME) ? self::SECURE_SCHEME : self::DEFAULT_SCHEME;
+                    $domain = str_contains($location, 'www.') ? 'www.' . $domain : $domain;
+                    $uri = $selected_schema . $domain . self::WP_ADMIN_PATH;
+                } else {
+                    return;
+                }
+            } else {
                 $uri = $selected_schema . $domain . self::WP_ADMIN_PATH;
             }
-        }
 
-        // second query
-        $request = new Request($uri);
-        $request->setTcpConnectTimeout(2400);
-        $response = yield $this->client->request($request);
+            // second query
+            $request = new Request($uri);
+            $request->setTcpConnectTimeout(2400);
+            $response = yield $this->client->request($request);
 
-        if (in_array($response->getStatus(), static::VALID_STATUSES)) {
+            if (in_array($response->getStatus(), static::VALID_STATUSES)) {
 
-            if (null === $parsed = yield from $this->parse($domain, $response)) {
-                Log::info("form not found: {$domain}");
-                $this->write('bad', $domain);
-                return;
-            }
+                if (null === $parsed = yield from $this->parse($domain, $response)) {
+                    Log::info("form not found: {$domain}");
+                    $this->write('bad', $domain);
+                    return;
+                }
 
-            [, $author] = $parsed;
-            if (null !== $author) {
-                Log::notice("verifed|login: {$domain}");
-                $this->write('verified', "{$uri};{$author}");
+                [, $author] = $parsed;
+                if (null !== $author) {
+                    Log::notice("verifed|login: {$domain}");
+                    $this->write('verified', "{$uri};{$author}");
+                } else {
+                    Log::notice("verifed: {$domain}");
+                    $this->write('verified', $uri);
+                }
             } else {
-                Log::notice("verifed: {$domain}");
-                $this->write('verified', $uri);
+                $this->write('bad', $domain);
             }
 
-        } else {
-
-            $this->write('bad', $domain);
-
         }
+
     }
 
     protected function  parse(string $domain, Response $response) : Generator
