@@ -33,7 +33,7 @@ Loop::run(function () use ($from, $to) {
                 $from->modify('+ 1 day');
             }
         } finally {
-            echo "Что то пошло не так, хуй знает что" . PHP_EOL;
+            echo "Что то пошло не так или чекер закончил работу" . PHP_EOL;
         }
     });
 
