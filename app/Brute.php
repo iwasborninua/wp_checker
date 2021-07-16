@@ -21,6 +21,11 @@ class Brute
             ->build();
     }
 
+    protected function write(string $flag, string $data) : int
+    {
+        return file_put_contents("{$flag}.txt", "{$data}\r\n", FILE_APPEND);
+    }
+
     public function handle($data) {
         $url = explode(';', $data['url'])[0];
 
