@@ -9,11 +9,10 @@ use Amp\Http\Client\Request;
 use Amp\Http\Client\Response;
 use Monolog\Handler\TelegramBotHandler;
 use Monolog\Logger;
+use Throwable;
 
 class Brute
 {
-    protected const WP_COOKIE_LOGIN = 'wordpress_logged_in_';
-
     public function __construct()
     {
         $this->client = (new HttpClientBuilder())
@@ -22,8 +21,7 @@ class Brute
             ->build();
     }
 
-    public function __invoke($data)
-    {
+    public function handle($data) {
         $url = explode(';', $data['url'])[0];
 
         $login      = $this->loginCheck($data);
@@ -63,6 +61,33 @@ class Brute
                 Log::debug("Invalid: {$wp_admin}");
             }
         }
+    }
+
+    public function __invoke($data)
+    {
+
+        try {
+            yield from $this->handle($data);
+        } catch (DnsException $e) {
+            $this->write('brute-fail', explode(';', $data['url'])[0] . ';' . $data['login'] . ':' . $data['password']);
+        } catch (
+        \Amp\Http\Client\Connection\UnprocessedRequestException
+        | \Amp\Http\Client\SocketExceptionReceiving
+        | \Amp\Http\Client\TimeoutException
+        | \Amp\Http\Client\Connection\Http2ConnectionException
+        | \Amp\Http\Client\Connection\Http2StreamException
+        | \Amp\Http\Client\Interceptor\TooManyRedirectsException
+        | \Amp\Http\Client\SocketException $e
+        ) {
+            Log::warning($e->getMessage());
+        } catch (Throwable $e) {
+            Log::error($e);
+        }
+
+
+
+
+
     }
 
     public function checkIterator($data, $login, $password)

@@ -4,8 +4,6 @@ namespace app;
 
 use Exception;
 use Generator;
-use JetBrains\PhpStorm\Internal\ReturnTypeContract;
-use Monolog\Logger;
 use Throwable;
 use Amp\Dns\DnsException;
 use Amp\Http\Client\HttpClientBuilder;
@@ -58,13 +56,9 @@ class Parser
     public function __invoke(string $domain) : Generator
     {
         try {
-
             yield from $this->handle($domain);
-
         } catch (DnsException $e) {
-
             $this->write('dns-fail', $domain);
-
         } catch (
             \Amp\Http\Client\Connection\UnprocessedRequestException
             | \Amp\Http\Client\SocketExceptionReceiving
@@ -74,13 +68,9 @@ class Parser
             | \Amp\Http\Client\Interceptor\TooManyRedirectsException
             | \Amp\Http\Client\SocketException $e
         ) {
-
             Log::warning($e->getMessage());
-
         } catch (Throwable $e) {
-
             Log::error($e);
-
         }
     }
 
@@ -94,10 +84,9 @@ class Parser
         $request->setTcpConnectTimeout(2400);
         $response = yield $this->client->request($request);
 
-
-
-        if (in_array($response->getStatus(),self::REDIRECT_STATUSES)) {
-            $this->write("redirect", $domain);
+        if (in_array($response->getStatus(),self::REDIRECT_STATUSES) && $response->getHeader("Location") != null) {
+            $uri = $response->getHeader("Location");
+            $this->write('redirect', $uri);
             return;
         }
 

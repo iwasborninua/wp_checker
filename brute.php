@@ -27,6 +27,8 @@ ErrorHandler::register(Log::getLogger());
 Loop::setErrorHandler([Log::class, 'critical']);
 resolver(new Resolver());
 
+$start_date = (new DateTime())->format('Y-d-m H:i:s');
+(new Telegram())->sendMessage("Чекер начал работу в {$start_date}.");
 
 Loop::run(function () use ($logins, $passwords) {
     $iterator = new Producer(function ($emit) use ($logins, $passwords) {
@@ -52,5 +54,6 @@ Loop::run(function () use ($logins, $passwords) {
 
     yield each($iterator, new LocalSemaphore(50), $brute);
     Log::debug('Брутер закончил работу.');
-    (new Telegram())->sendMessage('Брутер закончил работу.');
+    $end_date = (new DateTime())->format('Y-d-m H:i:s');
+    (new Telegram())->sendMessage("Брутер закончил работу в {$end_date}.");
 });
